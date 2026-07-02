@@ -241,16 +241,16 @@ ampiamente usate:
 
 \begin{table}[H]
 \centering
-\caption{Dimensione, costo computazionale e andamento del training su RSNA. Il GMAC e' calcolato per una inferenza con input 224x224 e conta le operazioni MAC di layer convoluzionali e lineari, in linea con analisi pratiche costo/accuratezza di reti neurali profonde \cite{canziani2016analysis}.}
+\caption{Dimensione, costo computazionale e andamento del training su RSNA. Il GMAC e' calcolato per una inferenza con input 224x224, riportato a quattro decimali, e conta le operazioni MAC di layer convoluzionali e lineari, in linea con analisi pratiche costo/accuratezza di reti neurali profonde \cite{canziani2016analysis}.}
 \begin{tabular}{llrrrr}
 \toprule
 Modello & Input & Parametri & GMAC & Best epoch & Epoche eseguite \\
 \midrule
-PneumoniaNet & 1x224x224 & 300161 & 0.527 & 5 & 10 \\
-ResNet18 & 3x224x224 & 11177025 & 1.814 & 10 & 15 \\
-MobileNetV3-Large & 3x224x224 & 4203313 & 0.215 & 5 & 10 \\
-EfficientNet-B0 & 3x224x224 & 4008829 & 0.385 & 4 & 9 \\
-DenseNet121 & 3x224x224 & 6954881 & 2.833 & 6 & 11 \\
+PneumoniaNet & 1x224x224 & 300161 & 0.5275 & 5 & 10 \\
+ResNet18 & 3x224x224 & 11177025 & 1.8136 & 10 & 15 \\
+MobileNetV3-Large & 3x224x224 & 4203313 & 0.2153 & 5 & 10 \\
+EfficientNet-B0 & 3x224x224 & 4008829 & 0.3845 & 4 & 9 \\
+DenseNet121 & 3x224x224 & 6954881 & 2.8331 & 6 & 11 \\
 \bottomrule
 \end{tabular}
 \end{table}
