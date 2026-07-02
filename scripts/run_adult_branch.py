@@ -95,6 +95,7 @@ def main():
                 batch_size=args.batch_size,
                 num_workers=args.num_workers,
                 device=args.device,
+                dataset_name=dataset_name,
             )
             output_path = eval_output_dir / evaluation_output_name(model_name, dataset_name)
             output_path.write_text(json.dumps(result, indent=2))

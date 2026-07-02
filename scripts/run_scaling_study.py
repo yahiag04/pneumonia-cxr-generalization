@@ -118,6 +118,8 @@ def run_scaling_study(args: argparse.Namespace) -> list[dict[str, Any]]:
                 batch_size=args.batch_size,
                 num_workers=args.num_workers,
                 device=args.device,
+                dataset_name="rsna",
+                prediction_model_id=run_id,
             )
         }
         for dataset_name, manifest_csv in manifests:
@@ -127,6 +129,8 @@ def run_scaling_study(args: argparse.Namespace) -> list[dict[str, Any]]:
                 batch_size=args.batch_size,
                 num_workers=args.num_workers,
                 device=args.device,
+                dataset_name=dataset_name,
+                prediction_model_id=run_id,
             )
         for dataset_name, result in evaluations.items():
             (eval_dir / f"{run_id}_{dataset_name}.json").write_text(
