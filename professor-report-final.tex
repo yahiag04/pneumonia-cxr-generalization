@@ -401,6 +401,42 @@ Chittagong & DenseNet121 & 0.602 & 0.926 & 0.764 & [0.729, 0.797] & 0.844 & [0.8
 \end{longtable}
 \normalsize
 
+\subsection{Controllo della proiezione AP/PA su RSNA}
+
+La proiezione radiografica e' un possibile confondente perche' puo' cambiare la
+geometria dell'immagine e, nel subset RSNA, e' associata anche alla classe. Nel
+test RSNA sono presenti 479 immagini AP e 521 PA; il gruppo AP contiene 401
+positivi e 78 negativi, mentre il gruppo PA contiene 99 positivi e 422 negativi.
+La tabella seguente riporta quindi una stratificazione diagnostica su RSNA test,
+non una stima causale isolata dell'effetto della proiezione.
+
+\begin{table}[H]
+\centering
+\caption{Controllo AP/PA su RSNA test. Le metriche sono ricalcolate dagli stessi score per-campione canonici; \(\Delta\)BA = BA(AP) - BA(PA).}
+\label{tab:view-position-rsna}
+\begin{tabular}{lrrrrr}
+\toprule
+Modello & AP BA & PA BA & \(\Delta\)BA & AP AUC & PA AUC \\
+\midrule
+PneumoniaNet & 0.763 & 0.810 & -0.047 & 0.926 & 0.912 \\
+ResNet18 & 0.856 & 0.934 & -0.079 & 0.977 & 0.982 \\
+MobileNetV3 & 0.883 & 0.925 & -0.043 & 0.977 & 0.984 \\
+EfficientNet-B0 & 0.882 & 0.912 & -0.030 & 0.971 & 0.983 \\
+DenseNet121 & 0.890 & 0.905 & -0.015 & 0.981 & 0.969 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Il controllo mostra che tutti i modelli hanno \balacc{} piu' bassa nel gruppo
+AP rispetto al gruppo PA, con differenze tra -0.015 e -0.079. Tuttavia la forte
+associazione tra proiezione e classe rende il risultato descrittivo: nel gruppo
+AP la specificity e' stimata su soli 78 negativi, mentre nel gruppo PA la
+sensitivity e' stimata su soli 99 positivi. Il confondente e' quindi
+quantificabile nel dominio RSNA, ma non eliminabile con questo split. Per
+Kermany e Chittagong i manifest locali contengono solo percorso e label, senza
+metadata DICOM AP/PA; non e' quindi possibile ripetere la stratificazione sui
+test esterni senza recuperare o annotare metadata aggiuntivi.
+
 \subsection{Analisi canonica della soglia}
 
 Per evitare una doppia fonte di verita', le metriche di questa analisi sono
@@ -924,13 +960,16 @@ seguono questa linea: le prestazioni interne RSNA sono alte per tutti i modelli
 principali, ma il ranking cambia su Kermany e Chittagong.
 
 La proiezione AP/PA resta un confondente possibile, non una spiegazione causale
-dimostrata. Il subset RSNA e' quasi bilanciato tra PA e AP, mentre i manifest
-esterni non permettono lo stesso controllo sistematico. L'analisi a soglia
-Youden mostra inoltre che la difficolta' relativa dei due dataset esterni non e'
-uniforme per tutte le architetture: quattro modelli su cinque hanno
-\balacc{} oracle piu' alta su Chittagong che su Kermany, mentre DenseNet121
-inverte il segno. La view position va quindi trattata come ipotesi da
-controllare, non come meccanismo sufficiente a spiegare il trasferimento.
+dimostrata. Su RSNA test il confondente e' stato quantificato
+(Tabella~\ref{tab:view-position-rsna}): AP e PA non hanno la stessa
+composizione di classe e tutti i modelli mostrano \balacc{} piu' bassa nel
+gruppo AP. I manifest esterni, invece, non contengono metadata AP/PA e quindi
+non permettono lo stesso controllo sistematico. L'analisi a soglia Youden mostra
+inoltre che la difficolta' relativa dei due dataset esterni non e' uniforme per
+tutte le architetture: quattro modelli su cinque hanno \balacc{} oracle piu'
+alta su Chittagong che su Kermany, mentre DenseNet121 inverte il segno. La view
+position va quindi trattata come confondente parzialmente quantificato su RSNA,
+ma non come meccanismo sufficiente a spiegare il trasferimento esterno.
 
 \paragraph{3. La migliore rete dipende dal dataset.}
 EfficientNet-B0 e' la scelta piu' forte su RSNA interno, DenseNet121 e' la piu'
@@ -1022,9 +1061,11 @@ I risultati vanno letti tenendo presenti alcune limitazioni metodologiche.
 
 \begin{itemize}
   \item \textbf{View position non completamente controllata}: RSNA contiene
-  metadata AP/PA e il subset e' quasi bilanciato, ma i manifest esterni non
-  permettono lo stesso controllo sistematico. La view position puo' quindi agire
-  come confondente di acquisizione nella generalizzazione cross-dataset.
+  metadata AP/PA e permette una stratificazione sul test interno, dove AP e PA
+  risultano associati alla classe e producono prestazioni diverse. I manifest
+  esterni, pero', non contengono la proiezione radiografica; la view position
+  resta quindi un confondente di acquisizione non controllabile nella
+  generalizzazione cross-dataset senza metadata aggiuntivi.
   \item \textbf{Soglia fissa}: le valutazioni principali usano soglia 0.5. Una
   calibrazione per dominio potrebbe cambiare sensitivity e specificity, ma
   introdurrebbe anche un ulteriore livello di adattamento al dataset esterno.
@@ -1079,59 +1120,63 @@ I risultati vanno letti tenendo presenti alcune limitazioni metodologiche.
   multi-epoca e non sostituisce un benchmark multi-classe definitivo.
 \end{itemize}
 
-\section{Riferimenti scientifici e collegamento con la tesi}
+\section{Stato dell'arte e posizionamento}
 
-\begin{itemize}
-  \item \textbf{Kermany et al.} \cite{kermany2018}
-  (\url{https://pubmed.ncbi.nlm.nih.gov/29474911/}): dimostra l'uso del
-  transfer learning per diagnosi da immagini mediche e include la
-  classificazione di polmonite pediatrica da radiografie toraciche. Nella tesi
-  e' utile come riferimento storico e come dataset esterno, ma non come dataset
-  principale per un'impostazione adult-oriented.
-  \item \textbf{Wang et al. ChestX-ray8/ChestX-ray14} \cite{wang2017nih}
-  (\url{https://arxiv.org/abs/1705.02315}): introduce un grande dataset CXR
-  multi-label con label ottenute da report radiologici. E' rilevante per
-  discutere NIH, label deboli e limiti della valutazione esterna.
-  \item \textbf{TorchXRayVision} \cite{torchxrayvision}
-  (\url{https://arxiv.org/abs/2111.00595}): fornisce modelli CXR
-  pre-addestrati su dataset diversi. E' la base dei test zero-shot.
-  \item \textbf{Cohen et al.} \cite{cohen2020limits}
-  (\url{https://arxiv.org/abs/2002.02497}): mostra che la generalizzazione
-  cross-domain in CXR e' problematica e che il disaccordo tra modelli puo'
-  rimanere anche quando le metriche aggregate sono buone. Questo supporta la
-  scelta di valutare piu' dataset e non un solo split.
-  \item \textbf{ResNet} \cite{he2016resnet}
-  (\url{https://arxiv.org/abs/1512.03385}), \textbf{DenseNet}
-  \cite{huang2017densenet} (\url{https://arxiv.org/abs/1608.06993}),
-  \textbf{EfficientNet} \cite{tan2019efficientnet}
-  (\url{https://arxiv.org/abs/1905.11946}) e \textbf{MobileNetV3}
-  \cite{howard2019mobilenetv3} (\url{https://arxiv.org/abs/1905.02244}):
-  giustificano le architetture di confronto rispetto alla CNN custom.
-  \item \textbf{Canziani et al.} \cite{canziani2016analysis}
-  (\url{https://arxiv.org/abs/1605.07678}): motiva la lettura congiunta di
-  accuratezza, parametri e operazioni computazionali quando si confrontano
-  modelli deep in scenari applicativi.
-  \item \textbf{Yosinski et al.} \cite{yosinski2014transferable}
-  (\url{https://arxiv.org/abs/1411.1792}): supporta l'interpretazione
-  dell'esperimento multi-classe come test di trasferibilita' delle feature
-  apprese sul task binario.
-  \item \textbf{McNemar} \cite{mcnemar1947}
-  (\url{https://doi.org/10.1007/BF02295996}), \textbf{DeLong}
-  \cite{delong1988} (\url{https://pubmed.ncbi.nlm.nih.gov/3203132/}) e
-  \textbf{bootstrap} \cite{efron1979bootstrap}
-  (\url{https://doi.org/10.1214/aos/1176344552}): giustificano l'analisi
-  statistica finale, rispettivamente per decisioni paired, AUC paired e
-  intervalli di confidenza.
-  \item \textbf{Holm} \cite{holm1979}
-  (\url{https://www.jstor.org/stable/4615733}): introduce la procedura
-  sequenziale di correzione per confronti multipli usata qui per McNemar e
-  DeLong entro ciascun dataset.
-  \item \textbf{Guo et al.} \cite{guo2017calibration}
-  (\url{https://arxiv.org/abs/1706.04599}): motiva il temperature scaling come
-  calibrazione post-hoc dei logit su un set di validation separato. Nel lavoro
-  qui riportato la temperatura e' fittata su RSNA validation e applicata senza
-  ri-fittare ai test RSNA, Kermany e Chittagong.
-\end{itemize}
+La classificazione automatica di patologie su radiografie toraciche si colloca
+in una letteratura ampia, ma eterogenea per popolazioni, label e protocolli di
+validazione. Il dataset di Kermany et al. \cite{kermany2018} e' uno dei
+riferimenti piu' noti per la classificazione di polmonite pediatrica e dimostra
+l'utilita' del transfer learning in imaging medico. In questo lavoro viene pero'
+usato come test esterno, non come sorgente di training principale, perche'
+l'obiettivo sperimentale e' un'impostazione adult-oriented basata su RSNA
+Pneumonia Detection Challenge \cite{rsna_kaggle}. ChestX-ray8/14 di Wang et al.
+\cite{wang2017nih} rappresenta invece un riferimento complementare: introduce
+un grande dataset CXR multi-label, con label estratte da report radiologici, e
+motiva la cautela verso dataset ampi ma debolmente annotati.
+
+Il punto centrale rispetto alla letteratura non e' ottenere un singolo numero
+alto su uno split interno, ma valutare la robustezza quando cambia il dominio.
+Cohen et al. \cite{cohen2020limits} mostrano che i modelli CXR possono
+degradare in modo marcato in trasferimento cross-dataset e che metriche
+aggregate apparentemente buone possono nascondere disaccordi tra modelli. La
+tesi si posiziona direttamente su questo problema: addestra tutte le
+architetture sullo stesso subset RSNA, poi confronta test interno, Kermany e
+Chittagong, includendo analisi di soglia, calibrazione e test paired. I modelli
+TorchXRayVision \cite{torchxrayvision} sono usati come controllo zero-shot
+esterno, per verificare che la pipeline locale produca risultati compatibili con
+modelli CXR gia' pre-addestrati su dataset radiografici.
+
+La scelta delle architetture combina una CNN custom compatta con reti standard
+di letteratura. ResNet \cite{he2016resnet} e DenseNet \cite{huang2017densenet}
+sono riferimenti consolidati per l'uso di connessioni residuali e dense nella
+propagazione delle feature; EfficientNet \cite{tan2019efficientnet} introduce
+lo scaling composto di profondita', larghezza e risoluzione; MobileNetV3
+\cite{howard2019mobilenetv3} rappresenta la famiglia efficiente orientata a
+costo computazionale ridotto. Questa selezione consente di separare tre aspetti:
+prestazione interna, trasferimento esterno ed efficienza. La lettura congiunta
+di accuratezza, parametri e operazioni e' coerente con Canziani et al.
+\cite{canziani2016analysis}, che mostrano come il confronto tra reti profonde
+debba considerare anche costo computazionale e non solo accuratezza.
+
+Rispetto agli studi che si limitano a confrontare accuracy o AUC, questo lavoro
+aggiunge due controlli metodologici. Il primo riguarda il punto operativo:
+balanced accuracy, sensitivity e specificity sono calcolate a soglia 0.5, ma
+vengono confrontate anche con soglie Youden oracle e con soglie trasferite da
+RSNA validation. Il secondo riguarda la calibrazione: seguendo Guo et al.
+\cite{guo2017calibration}, il temperature scaling viene fittato su validation
+RSNA e applicato ai test senza usare label target-domain. Il risultato mostra
+che la calibrazione probabilistica puo' migliorare ECE e Brier, ma non elimina
+lo shift model-specifico del ranking su Chittagong.
+
+L'analisi statistica segue infine un'impostazione paired: McNemar
+\cite{mcnemar1947} viene usato per confrontare le decisioni binarie sugli
+stessi campioni, DeLong \cite{delong1988} per confrontare AUC paired e bootstrap
+\cite{efron1979bootstrap} per intervalli descrittivi sulle metriche. La
+correzione di Holm \cite{holm1979} limita il rischio di sovrainterpretare
+confronti multipli entro lo stesso dataset. L'estensione multi-classe viene
+letta alla luce di Yosinski et al. \cite{yosinski2014transferable}: riusare
+feature apprese sul task binario e adattare una nuova testa permette un primo
+test di trasferibilita', ma non sostituisce un training multi-classe completo.
 
 \section{Conclusione operativa}
 
