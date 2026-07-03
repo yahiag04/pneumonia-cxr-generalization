@@ -60,15 +60,12 @@ Kermany--Chittagong dei singoli modelli segue da vicino la differenza di AUC.
 L'analisi di calibrazione mostra che Chittagong ha errore di calibrazione piu'
 alto di RSNA per tutte le architetture, ma una calibrazione post-hoc tramite
 temperature scaling fittata su validation RSNA non basta a stabilizzare il
-ranking operativo su Chittagong. I tre controlli finali falliscono per motivi
-diversi: temperature scaling non cambia le decisioni a soglia 0.5, Youden
-oracle non e' deployabile, e la soglia trasferita da RSNA validation recupera
-parzialmente il livello di \balacc{} ma non il ranking. La lettura finale e'
-che la selezione del modello in trasferimento cross-domain richiede dati
-target-domain, o almeno una validation rappresentativa del dominio di deploy.
-E' stata inoltre aggiunta una prima estensione multi-classe
-RSNA, in cui la classe esclusa \texttt{No Lung Opacity / Not Normal} viene
-trattata come terza categoria distinta.
+ranking operativo su Chittagong. Nel complesso, la selezione del modello in
+trasferimento cross-domain richiede dati target-domain, o almeno una validation
+rappresentativa del dominio di deploy. E' stata inoltre aggiunta una prima
+estensione esplorativa multi-classe RSNA, in cui la classe esclusa
+\texttt{No Lung Opacity / Not Normal} viene trattata come terza categoria
+distinta.
 \end{abstract}
 
 \tableofcontents
@@ -441,13 +438,10 @@ test esterni senza recuperare o annotare metadata aggiuntivi.
 
 Per evitare una doppia fonte di verita', le metriche di questa analisi sono
 ricalcolate dagli score per-campione salvati in
-\texttt{outputs/predictions/\{dataset\}/\{model\}.npz}. Ogni file contiene
-label, probabilita' della classe positiva \pneumonia{}, logit pre-sigmoid e
-identificativo del campione. Il logit e' il valore prodotto dal modello prima
-della sigmoid; la probabilita' e' ottenuta applicando la sigmoid una sola volta.
-La soglia di Youden e' calcolata sullo stesso test set riportato:
-e' quindi una soglia \emph{oracle}, ottimistica e non deployabile. Serve solo a
-separare il potere discriminativo dal punto operativo fisso 0.5.
+\texttt{outputs/predictions/\{dataset\}/\{model\}.npz}. La soglia di Youden e'
+calcolata sullo stesso test set riportato: e' quindi una soglia
+\emph{oracle}, ottimistica e non deployabile, usata solo per distinguere il
+potere discriminativo dal punto operativo fisso 0.5.
 
 \begin{table}[H]
 \centering
@@ -492,10 +486,10 @@ DenseNet121 & 0.088 & 0.081 & 0.007 \\
 \end{tabular}
 \end{table}
 
-Il gap cross-dataset a soglia Youden segue molto da vicino il gap di AUC:
+Il gap cross-dataset a soglia Youden segue da vicino il gap di AUC:
 \(|\Delta(\mathrm{BA}_{Youden})-\Delta(\mathrm{AUC})| \leq 0.021\) per tutte
-le cinque architetture. Con \(n=5\) modelli questo va letto come pattern
-osservato robusto, non come inferenza statistica. Il segno e' pero' informativo:
+le cinque architetture. Con \(n=5\) modelli questo va letto come andamento
+osservato, non come inferenza statistica generale. Il segno e' pero' informativo:
 quattro modelli su cinque hanno \balacc{} oracle piu' alta su Chittagong che su
 Kermany, mentre DenseNet121 e' l'unico con gap positivo e quindi con bias di
 dominio opposto.
@@ -512,12 +506,9 @@ dominio opposto.
 Per verificare se l'instabilita' del ranking su Chittagong dipenda da
 miscalibrazione delle probabilita', sono state calcolate metriche di
 calibrazione a partire dagli stessi file per-campione usati come sorgente
-canonica. La classe positiva e' sempre \pneumonia{}=1. L'ECE equal-width usa 10
-bin uniformi in \([0,1]\); l'ECE equal-mass ordina gli score e divide i campioni
-in 10 gruppi di cardinalita' simile. Il secondo schema e' utile quando molti
-score sono saturati vicino a 1.0, perche' evita che la massa finisca quasi
-tutta nello stesso bin. Il Brier score e' riportato come controllo
-binning-free.
+canonica. La classe positiva e' sempre \pneumonia{}=1. Sono riportati ECE
+equal-width, ECE equal-mass e Brier score; l'ECE equal-mass serve soprattutto
+nei casi con score molto concentrati vicino a 0 o 1.
 
 \begin{table}[H]
 \centering
@@ -548,8 +539,8 @@ DenseNet121 & Chittagong & 0.125 & 0.120 & 0.176 \\
 \normalsize
 \end{table}
 
-La verifica falsificabile sull'ipotesi di calibrazione e' positiva solo in
-parte. Chittagong ha ECE equal-mass maggiore di RSNA per tutti i cinque modelli:
+Il confronto e' positivo solo in parte. Chittagong ha ECE equal-mass maggiore di
+RSNA per tutti i cinque modelli:
 le differenze Chittagong--RSNA sono +0.002 per PneumoniaNet, +0.075 per
 ResNet18, +0.098 per MobileNetV3, +0.132 per EfficientNet-B0 e +0.095 per
 DenseNet121. Rispetto a Kermany, invece, Chittagong ha ECE maggiore in tre
@@ -557,25 +548,13 @@ modelli su cinque: MobileNetV3, EfficientNet-B0 e DenseNet121. Quindi
 Chittagong e' sistematicamente peggiore di RSNA in calibrazione, ma non e'
 uniformemente peggiore di Kermany.
 
-Per ogni modello sono stati generati anche reliability diagram separati per
-RSNA, Kermany e Chittagong in
-\texttt{outputs/calibration/reliability\_\{model\}.png}. Nel caso MobileNetV3
-su RSNA sono presenti probabilita' saturate a 1.0, ma ECE equal-mass 0.023 e
-Brier 0.042 indicano che la saturazione non e' di per se' un errore: il modello
-e' molto confidente soprattutto su esempi corretti. Per questo il Brier score
-viene usato come controllo rispetto a possibili artefatti del binning ECE.
+Sono stati generati anche reliability diagram per ogni modello. Il Brier score
+viene usato come controllo binning-free rispetto all'ECE.
 
 E' stato poi applicato temperature scaling binario: per ogni modello si fitta
 una temperatura \(T>0\) sui logit della validation RSNA e la stessa \(T\) viene
-applicata senza ri-fittare ai test RSNA, Kermany e Chittagong. Il protocollo e'
-quindi deployabile rispetto ai test set: il test non viene usato per scegliere
-la temperatura. La trasformazione e'
-\[
-p_T(y=1 \mid x) = \sigma(z(x)/T),
-\]
-dove \(z(x)\) e' il logit pre-sigmoid. Poiche' \(T>0\), la trasformazione e'
-monotona e non puo' cambiare la ROC-AUC. Questa invarianza e' stata verificata
-nel codice con un assert numerico.
+applicata ai test. Poiche' la trasformazione e' monotona, la ROC-AUC resta
+invariata; l'assert nel codice verifica questa proprieta'.
 
 \begin{table}[H]
 \centering
@@ -606,29 +585,16 @@ DenseNet121 & Chittagong & 0.851 & 0.120$\rightarrow$0.131 & 0.176$\rightarrow$0
 \normalsize
 \end{table}
 
-Il risultato e' asimmetrico. Nel dominio Chittagong, il temperature scaling
-migliora ECE equal-mass e Brier per ResNet18, MobileNetV3 ed EfficientNet-B0;
-e' quasi neutro per PneumoniaNet; peggiora DenseNet121. Il caso DenseNet121 non e' un
-artefatto del binning ECE: anche il Brier peggiora da 0.1756 a 0.1809. Inoltre
-la temperatura fittata su RSNA validation e' \(T=0.851<1\), quindi rende le
-probabilita' piu' estreme; questa correzione aiuta su RSNA ma peggiora su
-Chittagong, confermando DenseNet121 come outlier di dominio.
+Su Chittagong, il temperature scaling migliora ECE equal-mass e Brier per
+ResNet18, MobileNetV3 ed EfficientNet-B0; e' quasi neutro per PneumoniaNet e
+peggiora DenseNet121. Il peggioramento di DenseNet121 non dipende solo dal
+binning ECE, perche' anche il Brier passa da 0.1756 a 0.1809. La calibrazione,
+pero', non cambia il ranking a soglia 0.5: con \(T>0\) il segno del logit resta
+lo stesso e quindi restano identiche anche le predizioni binarie.
 
-Il temperature scaling non puo' invece correggere il ranking a soglia fissa
-0.5. Infatti, per ogni \(T>0\),
-\[
-\sigma(z/T) \geq 0.5 \Longleftrightarrow z \geq 0.
-\]
-Le predizioni binarie a soglia 0.5 restano quindi identiche prima e dopo la
-calibrazione. Numericamente, su Chittagong la correlazione di rango tra ranking
-a soglia 0.5 e ranking oracle Youden resta 0.10 sia prima sia dopo il
-temperature scaling.
-
-E' stata infine provata una variante deployabile di scelta della soglia: per
-ogni modello si calcola la soglia Youden su RSNA validation e la si applica a
-Chittagong. Anche questa procedura non usa label di test Chittagong, quindi e'
-deployabile rispetto al test esterno. Il confronto con la soglia Youden oracle
-su Chittagong e' riportato nella tabella seguente.
+Infine, per simulare una scelta di soglia piu' realistica, la soglia Youden e'
+stata calcolata su RSNA validation e applicata a Chittagong. Il confronto con
+la soglia Youden oracle su Chittagong e' riportato nella tabella seguente.
 
 \begin{table}[H]
 \centering
@@ -717,26 +683,17 @@ un incremento almeno doppio dei parametri produce meno di +0.01 di \balacc{}
 rispetto al miglior punto precedente con al massimo meta' dei parametri.
 
 Va distinta la confrontabilita' di protocollo dalla confrontabilita' di
-checkpoint. Lo script di scaling chiama il training loop per tutti i punti e non
-ricarica esplicitamente i checkpoint del benchmark principale. Tuttavia gli
-artefatti prodotti mostrano due casi diversi. Il punto PneumoniaNet \(w=1.0\)
-ha la stessa architettura della PneumoniaNet del benchmark principale, ma non lo
-stesso checkpoint: il benchmark seleziona il best checkpoint a epoca 5, mentre
-la run di scaling \(w=1.0\) seleziona il best checkpoint a epoca 16. Questo
-spiega la discrepanza numerica tra le due tabelle per la stessa architettura:
-0.896 contro 0.914 su RSNA e 0.830 contro 0.756 su Chittagong. Per
-EfficientNet-B0, invece, la riesecuzione con lo stesso seed seleziona lo stesso
-best checkpoint del benchmark principale, con metriche identiche alle cifre
-riportate. Questa asimmetria e' un esito empirico degli artefatti, non una
-differenza intenzionale di protocollo. Dai metadata dei checkpoint non emerge
-una differenza di \texttt{epochs}, \texttt{patience}, learning rate o seed; la
-divergenza del best epoch implica quindi che il training non e' bit-identico
-tra esecuzioni separate. Rimane non-determinismo residuo nella pipeline, per
-esempio nello shuffling del DataLoader e/o nei kernel numerici usati dal backend. L'asimmetria tra i due modelli e' coerente con la curva di validation piatta di PneumoniaNet su RSNA (\balacc{} tra 0.914 e 0.924): quando il massimo della val-BA e' quasi piatto tra epoche, una perturbazione non deterministica sposta facilmente l'argmax (epoca 5 contro 16), mentre per EfficientNet-B0 il picco e' piu' netto e la selezione resta stabile.
-I valori assoluti delle due tabelle non devono quindi essere usati come se tutti
-i punti fossero la stessa identica esecuzione; per PneumoniaNet il riferimento
-assoluto resta il checkpoint del benchmark principale, mentre la tabella di
-scaling serve soprattutto a leggere l'andamento entro-protocollo.
+checkpoint. Lo script di scaling riaddestra i punti della curva e non ricarica
+esplicitamente i checkpoint del benchmark principale. Per PneumoniaNet \(w=1.0\)
+la rete e' la stessa del benchmark, ma il best checkpoint cambia: epoca 5 nel
+benchmark, epoca 16 nello scaling. Questo spiega la differenza tra 0.896 e
+0.914 su RSNA e tra 0.830 e 0.756 su Chittagong. I metadata non indicano
+differenze di \texttt{epochs}, \texttt{patience}, learning rate o seed; la
+spiegazione piu' prudente e' non-determinismo residuo tra esecuzioni separate.
+La curva di validation di PneumoniaNet e' quasi piatta (\balacc{} 0.914--0.924),
+quindi piccole perturbazioni possono spostare l'argmax tra epoche. Per questo i
+valori assoluti di PneumoniaNet vanno riferiti al checkpoint del benchmark; la
+curva di scaling serve soprattutto a leggere l'andamento entro-protocollo.
 
 \begin{table}[H]
 \centering
@@ -786,40 +743,24 @@ B3 & 10697769 & 0.961 & 0.936 & 0.805 & 0.750 \\
 \caption{Studio di scaling: \balacc{} rispetto al costo computazionale in GMAC.}
 \end{figure}
 
-Il risultato piu' pulito riguarda RSNA interno. Per PneumoniaNet, passare da
-75457 parametri a 4.78 milioni di parametri cambia la \balacc{} solo da 0.922 a
-0.923, con massimo osservato 0.924 a \(w=3.0\). Anche nella famiglia
-EfficientNet la curva non migliora con la dimensione: B0 ottiene 0.950, B1
-0.946, B2 0.947 e B3 0.936. La curva interna risulta quindi gia' quasi piatta
-nel range esplorato, entro la variabilita' del training, piu' che un plateau
-monotono pulito.
+Il risultato va letto in modo descrittivo. Su RSNA interno la curva e' quasi
+piatta: PneumoniaNet resta tra 0.914 e 0.924, mentre EfficientNet non migliora
+passando da B0 a B3. Sui dataset esterni, invece, le curve oscillano senza un
+andamento monotono chiaro. Con un solo seed non e' possibile separare l'effetto
+della capacita' dal rumore del training; lo studio indica quindi che la
+performance interna e' gia' poco sensibile alla dimensione, mentre una
+conclusione sullo scaling esterno richiederebbe run multi-seed e, idealmente,
+anche valori diversi di \texttt{--train-size}.
 
-Sui dataset esterni, invece, le curve non sono monotone. PneumoniaNet oscilla da
-0.666 a 0.724 su Kermany e da 0.756 a 0.817 su Chittagong. EfficientNet mostra
-lo stesso problema: su Chittagong B1 scende a 0.674, mentre B0 e B2 sono vicine
-a 0.80. Queste oscillazioni sono della stessa grandezza, o piu' grandi,
-dell'effetto atteso della capacita'. Con un solo seed non e' quindi possibile
-separare in modo affidabile l'effetto della complessita' dal rumore del training
-sulla generalizzazione esterna. Lo studio mostra una curva interna quasi piatta,
-ma non consente una conclusione forte sullo scaling esterno.
+\section{Estensione esplorativa multi-classe RSNA}
 
-Operativamente, il prossimo passo non e' soltanto aumentare la capacita', ma
-misurare la variabilita'. Lo stesso script puo' essere rilanciato piu' volte
-variando \texttt{--seed} e cambiando la dimensione del training set tramite
-\texttt{--train-size}. Solo una curva multi-seed, eventualmente ripetuta con
-piu' immagini RSNA, puo' distinguere saturazione da capacita', saturazione da
-dati e rumore stocastico del training.
-
-\section{Estensione multi-classe RSNA}
-
-Per rispondere all'ipotesi di aggiungere la terza classe esclusa finora, e'
-stato preparato un task RSNA a tre classi:
+Come estensione esplorativa, e' stato preparato un task RSNA a tre classi:
 \texttt{normal}, \texttt{lung\_opacity} e
 \texttt{not\_normal\_no\_lung\_opacity}. Quest'ultima classe corrisponde alla
 categoria RSNA esclusa dal task binario: radiografie non normali ma senza
-opacita' polmonare annotata. L'estensione resta quindi coerente con
-l'impostazione del progetto, che distingue presenza o assenza di opacita'
-polmonare/polmonite e non introduce sottotipi eziologici.
+opacita' polmonare annotata. L'obiettivo non e' costruire un secondo benchmark
+completo, ma verificare quanto le feature binarie si trasferiscano a una
+formulazione leggermente piu' ricca del problema.
 
 Per rendere l'esperimento rapido e collegato al lavoro binario gia' svolto, ogni
 modello e' stato inizializzato dal proprio checkpoint RSNA binario. Sono stati
@@ -827,14 +768,13 @@ caricati tutti i layer compatibili e sostituita la testa finale con una nuova
 uscita a tre logit. Per le architetture pre-addestrate la backbone e' stata
 congelata ed e' stata addestrata la testa multi-classe per una epoca; per
 PneumoniaNet e' stato usato lo stesso checkpoint binario come inizializzazione.
-Questa analisi e' quindi una prima stima del trasferimento dal task binario al
-task a tre classi, coerente con l'idea che le feature apprese possano trasferire
-in modo non uniforme tra task correlati \cite{yosinski2014transferable}, non
-ancora un fine-tuning completo multi-classe.
+Questa analisi e' quindi un linear probe sui checkpoint binari, coerente con
+l'idea che le feature apprese possano trasferire in modo non uniforme tra task
+correlati \cite{yosinski2014transferable}.
 
 \begin{table}[H]
 \centering
-\caption{Risultati preliminari sul task RSNA multi-classe. I modelli sono inizializzati dai rispettivi checkpoint binari RSNA. BA indica macro recall.}
+\caption{Esperimento esplorativo sul task RSNA multi-classe. I modelli sono inizializzati dai rispettivi checkpoint binari RSNA. BA indica macro recall.}
 \begin{tabular}{lrrrr}
 \toprule
 Modello & Accuracy & BA & Macro precision & Macro F1 \\
@@ -878,22 +818,14 @@ Not normal/no opacity & 121 & 173 & 206 \\
 \end{tabular}
 \end{table}
 
-Il risultato principale va letto come limite del trasferimento dal task binario
-al task multi-classe. Le feature usate in questo protocollo sono state ottimizzate
-per separare opacita' polmonare da assenza di opacita', mentre la classe
-\texttt{not\_normal\_no\_lung\_opacity} non era presente nel training binario.
-Le architetture pre-addestrate e poi adattate al task binario trasferiscono
-meglio di PneumoniaNet al task a tre classi: MobileNetV3-Large ottiene la BA
-macro piu' alta (0.692), seguita da EfficientNet-B0 e DenseNet121 (0.687) e
-ResNet18 (0.677). Tuttavia nessun modello separa bene la terza classe con una
-sola testa multi-classe: il miglior recall su
-\texttt{not\_normal\_no\_lung\_opacity} e' 0.478 con ResNet18, mentre
-MobileNetV3-Large raggiunge 0.412. La confusion matrix di MobileNetV3-Large
-mostra che molti esempi della terza classe vengono proiettati sull'asse binario
-gia' appreso e quindi assorbiti da \texttt{normal} o \texttt{lung\_opacity}.
-L'esperimento va quindi letto come linear probe sui checkpoint binari, utile per
-mostrare che un vero benchmark multi-classe richiede fine-tuning end-to-end e
-analisi degli errori dedicata.
+Il risultato principale e' che il trasferimento dal binario al multi-classe e'
+limitato. MobileNetV3-Large ottiene la BA macro piu' alta (0.692), ma nessun
+modello separa bene la terza classe con una sola testa: il miglior recall su
+\texttt{not\_normal\_no\_lung\_opacity} e' 0.478 con ResNet18. La confusion
+matrix di MobileNetV3-Large mostra che molti esempi della terza classe vengono
+assorbiti da \texttt{normal} o \texttt{lung\_opacity}. Il risultato suggerisce
+che un vero benchmark multi-classe richiede fine-tuning end-to-end e analisi
+degli errori dedicata.
 
 \section{Test statistici tra modelli}
 
@@ -979,13 +911,13 @@ assoluta, si dimostra che la scelta dell'architettura va valutata insieme al
 dominio di test.
 
 \paragraph{4. Soglia e separabilita' spiegano fenomeni diversi.}
-L'analisi della soglia falsifica la spiegazione piu' semplice del caso
-DenseNet121. Se il gap Kermany--Chittagong fosse principalmente un effetto del
-punto operativo 0.5, ci si aspetterebbe che il gap si chiudesse passando alla
-soglia Youden oracle. Invece DenseNet121 passa da un gap di \balacc{} 0.094 a un
-gap oracle 0.088, molto vicino al gap di AUC 0.081. Quindi, per DenseNet121, il
-divario tra Kermany e Chittagong riflette soprattutto separabilita' diversa tra
-i due domini, non solo una soglia mal posizionata.
+L'analisi della soglia ridimensiona la spiegazione piu' semplice del caso
+DenseNet121. Se il gap Kermany--Chittagong dipendesse soprattutto dal punto
+operativo 0.5, dovrebbe ridursi molto usando la soglia Youden. Invece DenseNet121
+passa da un gap di \balacc{} 0.094 a un gap oracle 0.088, vicino al gap di AUC
+0.081. Per questo modello, quindi, la differenza tra Kermany e Chittagong
+riflette soprattutto separabilita' diversa tra i due domini, non solo una soglia
+mal posizionata.
 
 La soglia resta pero' importante per il ranking entro Chittagong. A soglia 0.5,
 PneumoniaNet e' prima in \balacc{}; a soglia Youden, EfficientNet-B0 diventa
@@ -999,24 +931,20 @@ all'invarianza di dominio esterno, con gap quasi nullo in entrambe le metriche.
 \paragraph{5. La calibrazione spiega solo una parte del problema.}
 L'analisi ECE/Brier mostra che Chittagong e' peggio calibrato di RSNA per tutte
 le architetture, ma non dimostra che la sola calibrazione risolva il ranking.
-Temperature scaling, fittato correttamente su RSNA validation e applicato ai
-test, migliora la calibrazione nel dominio Chittagong per ResNet18, MobileNetV3
-ed EfficientNet-B0, ma non per PneumoniaNet e DenseNet121. Questo statement e'
-specifico di Chittagong: su RSNA, ad esempio, PneumoniaNet e DenseNet121
-migliorano leggermente dopo temperature scaling. Il caso DenseNet121 su
-Chittagong e'
-particolarmente importante: ECE equal-mass peggiora da 0.120 a 0.131 e anche il
-Brier score peggiora da 0.1756 a 0.1809, quindi il peggioramento non e' un
-artefatto del binning ECE.
+Temperature scaling, fittato su RSNA validation e applicato ai test, migliora la
+calibrazione su Chittagong per ResNet18, MobileNetV3 ed EfficientNet-B0, ma non
+per PneumoniaNet e DenseNet121. Questa osservazione riguarda Chittagong: su
+RSNA, ad esempio, PneumoniaNet e DenseNet121 migliorano leggermente dopo
+temperature scaling. Nel caso DenseNet121 su Chittagong peggiorano sia ECE
+equal-mass (0.120--0.131) sia Brier score (0.1756--0.1809), quindi il problema
+non e' solo un artefatto del binning ECE.
 
-La calibrazione tramite temperatura non puo' cambiare il ranking a soglia 0.5:
-essendo una trasformazione monotona dei logit con \(T>0\), lascia invariato il
-segno del logit e quindi le decisioni binarie a soglia 0.5. Numericamente, su
-Chittagong la Spearman tra ranking a soglia 0.5 e ranking Youden oracle resta
-0.10 prima e dopo temperature scaling. Anche la soglia Youden fittata su RSNA
-validation e applicata a Chittagong resta lontana dal ranking oracle
-(\(\rho=0.20\)). La conclusione e' quindi precisa: la miscalibrazione contribuisce
-al problema, ma una calibrazione globale source-domain non rimuove lo shift
+La calibrazione tramite temperatura migliora le probabilita', ma non cambia le
+decisioni a soglia 0.5. Infatti su Chittagong la Spearman tra ranking a soglia
+0.5 e ranking Youden oracle resta 0.10 prima e dopo temperature scaling. Anche
+la soglia Youden fittata su RSNA validation e applicata a Chittagong resta
+lontana dal ranking oracle (\(\rho=0.20\)). La miscalibrazione contribuisce al
+problema, ma una calibrazione globale source-domain non rimuove lo shift
 model-specifico del dominio Chittagong.
 
 \paragraph{6. PneumoniaNet resta competitiva su Chittagong.}
@@ -1223,8 +1151,8 @@ oracle Chittagong solo a 0.20. Quindi il punto operativo e la calibrazione
 contano, ma il domain shift residuo e' model-specifico e non viene rimosso da
 una singola calibrazione source-domain.
 
-L'estensione multi-classe con la terza classe RSNA esclusa finora e' stata
-avviata su tutte le architetture principali. Nel protocollo preliminare,
+L'estensione esplorativa multi-classe con la terza classe RSNA esclusa finora e'
+stata avviata su tutte le architetture principali. Nel protocollo preliminare,
 MobileNetV3-Large ottiene la migliore \balacc{} macro (0.692), seguita da
 EfficientNet-B0 e DenseNet121 (0.687) e ResNet18 (0.677). La classe
 \texttt{No Lung Opacity / Not Normal} resta poco separata nel linear probe: il
