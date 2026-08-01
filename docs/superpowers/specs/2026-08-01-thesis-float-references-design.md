@@ -4,8 +4,8 @@
 
 Rendere esplicito nel testo il collegamento con tutte le figure e le tabelle di
 `professor-report-final.tex`, seguendo la convenzione normalmente usata nelle
-tesi universitarie. Il documento contiene quattro figure e diciannove tabelle,
-inclusa la tabella realizzata con `longtable`.
+tesi universitarie. Il documento contiene quattro figure, diciannove ambienti
+`table` e un ambiente `longtable`, per un totale di venti tabelle.
 
 ## Criterio editoriale
 
@@ -47,7 +47,7 @@ riferimento numerato.
 
 ## Verifica
 
-La revisione è completa quando tutte le quattro figure e le diciannove tabelle
+La revisione è completa quando tutte le quattro figure e le venti tabelle
 hanno una `\label` univoca e almeno un richiamo nel testo, nessun riferimento
 punta a un'etichetta inesistente, nessuna etichetta è duplicata e il conteggio
 di parentesi graffe e delimitatori matematici del sorgente resta bilanciato. La
