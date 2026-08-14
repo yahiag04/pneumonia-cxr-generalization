@@ -1,4 +1,4 @@
-# Pneumonia X-ray Classifier
+# Cross-Dataset Pneumonia Classification from Chest X-Rays
 
 Research code for an academic thesis on **binary pneumonia classification from
 chest radiographs**, with particular attention to cross-dataset generalization,
@@ -280,7 +280,7 @@ end-to-end training protocol and dedicated error analysis are needed.
 ## Repository structure
 
 ```text
-pneumonia-xray-classifier/
+pneumonia-cxr-generalization/
 ├── models/                 # PneumoniaNet implementation
 ├── thesis/                 # Reusable data, training, metrics and analysis code
 ├── scripts/                # Command-line experiment entry points
@@ -326,8 +326,8 @@ override automatic selection.
 ### Environment setup
 
 ```bash
-git clone https://github.com/yahiag04/pneumonia-xray-classifier.git
-cd pneumonia-xray-classifier
+git clone https://github.com/yahiag04/pneumonia-cxr-generalization.git
+cd pneumonia-cxr-generalization
 
 python3 -m venv .venv
 source .venv/bin/activate
@@ -651,8 +651,8 @@ specific commit hash used for the experiments:
 ```bibtex
 @software{ghallale2026pneumonia,
   author = {Ghallale, Yahia},
-  title = {Pneumonia X-ray Classifier},
+  title = {Cross-Dataset Pneumonia Classification from Chest X-Rays},
   year = {2026},
-  url = {https://github.com/yahiag04/pneumonia-xray-classifier}
+  url = {https://github.com/yahiag04/pneumonia-cxr-generalization}
 }
 ```
